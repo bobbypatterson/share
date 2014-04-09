@@ -1,0 +1,28 @@
+This sample MapReduce application consists of two Java classes that process Apache web log data and store the results in HDFS:
+ - a mappper class to parse and filter the raw web log data
+ - a driver program to set up and execute the map-only job
+
+The output is a tab-delimited file in HDFS containing the following:
+ - Visitor ID (from cookie)
+ - IP address
+ - Timestamp
+ - URL minus any query parameters
+ - Campaign parameter passed in URL query string
+ - Response code (200, 404, etc)
+ - Referer (URL)
+ - User agent
+    
+ The code assumes the following configuration in the httpd.conf configuration file. Fields are separated by the tab character.  
+ 	LogFormat "%{visitorcookiename}C\t%{Set-Cookie}o\t%h\t%l\t%u\t%t\t%r\t%>s\t%b\t%{Referer}i\t%{User-Agent}i\t" combined
+   
+ Example input line:
+ 75.72.48.19.1395498184485044 - 75.72.48.19 - - [20/Mar/2014:08:22:01 -0400] "GET /index.php HTTP/1.1" 200 1822 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36"
+  
+This code was developed with the following configuration:
+Hadoop 2.2.0
+Java SE 1.7.0_51
+
+The following libraries are required to compile this application:
+hadoop-2.2.0/share/hadoop/mapreduce/hadoop-mapreduce-client-core-2.2.0.jar
+hadoop-2.2.0/share/hadoop/common/hadoop-common-2.2.0.jar
+hadoop-2.2.0/share/hadoop/common/lib/commons-cli-1.2.jar
