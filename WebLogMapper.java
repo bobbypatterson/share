@@ -13,6 +13,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
 
 public class WebLogMapper extends Mapper<LongWritable, Text, NullWritable, Text> {
 	
@@ -24,6 +25,10 @@ public class WebLogMapper extends Mapper<LongWritable, Text, NullWritable, Text>
 	private ArrayList<String> ipFilter;
 	
 	private Text logObject = new Text();
+	
+	// Used for error logging
+	private static final Logger webLogger = Logger.getLogger(WebLogMapper.class);
+
 
 	protected void setup(Context context) {
 
@@ -32,6 +37,7 @@ public class WebLogMapper extends Mapper<LongWritable, Text, NullWritable, Text>
 		urlFilter.add(".js");
 		urlFilter.add(".jpg");
 		urlFilter.add(".css");
+		urlFilter.add(".ico");
 		
 		// Set up filter for known bots such as Google
 		botFilter = new ArrayList<String>(1);
@@ -39,7 +45,7 @@ public class WebLogMapper extends Mapper<LongWritable, Text, NullWritable, Text>
 		
 		// Establish list of IPs for filtering
 		ipFilter = new ArrayList<String>(1);
-		ipFilter.add("75.72.48.19");
+		ipFilter.add("12.34.56.78");
 		
 	}
 
@@ -52,41 +58,46 @@ public class WebLogMapper extends Mapper<LongWritable, Text, NullWritable, Text>
 	
 		// Split the input line based on delimiter 
 		String[] allFields = value.toString().split(delim);
+		
+		// Check to make sure we have the expected number of fields
+		if (allFields.length < 11) {
+			webLogger.error("Invalid input record - skipping");
+		} else {
 
-		// Split out fields that we need to determine whether or not to keep this record
-		String[] urlFields = allFields[6].split(" ");
-		String url = urlFields[1];
-		String userAgent = allFields[10];
-		String ip = allFields[2];
-
-		/* call filter methods to determine if we should keep this record
-		 * if so, continue to process the log record and write to output
-		 */
-		if (filterUrl(url) && filterBot(userAgent) && filterIp(ip)) {
-			
-			String visitor = getVisitor(allFields);
-			
-			// Get rid of extraneous characters in timestamp
-			String[] timeFields = allFields[5].split(" ");
-			String timestamp = timeFields[0].replaceAll("\\[", "");
-
-			// Save campaign parameter if it exists and keep base part of URL
-			String[] urlParm = url.toString().split("[\\?\\=]");
-			if (urlParm.length > 2) {
-				campaign = urlParm[2];
-				url = urlParm[0];
+			// Split out fields that we need to determine whether or not to keep this record
+			String[] urlFields = allFields[6].split(" ");
+			String url = urlFields[1];
+			String userAgent = allFields[10];
+			String ip = allFields[2];
+	
+			/* call filter methods to determine if we should keep this record
+			 * if so, continue to process the log record and write to output
+			 */
+			if (filterUrl(url) && filterBot(userAgent) && filterIp(ip)) {
+				
+				String visitor = getVisitor(allFields);
+				
+				// Get rid of extraneous characters in timestamp
+				String[] timeFields = allFields[5].split(" ");
+				String timestamp = timeFields[0].replaceAll("\\[", "");
+	
+				// Save campaign parameter if it exists and keep base part of URL
+				String[] urlParm = url.toString().split("[\\?\\=]");
+				if (urlParm.length > 2) {
+					campaign = urlParm[2];
+					url = urlParm[0];
+				}
+				
+				String responseCode = allFields[7];
+				String referer = allFields[9];
+	
+				// Concatenate fields to build output record
+				logObject.set(visitor + delim + ip + delim + timestamp + delim + url + delim + campaign + delim + responseCode + delim + referer + delim + userAgent);
+	
+				// write out record with null key since this is a map-only job
+				context.write(NullWritable.get(), logObject);
 			}
-			
-			String responseCode = allFields[7];
-			String referer = allFields[9];
-
-			// Concatenate fields to build output record
-			logObject.set(visitor + delim + ip + delim + timestamp + delim + url + delim + campaign + delim + responseCode + delim + referer + delim + userAgent);
-
-			// write out record with null key since this is a map-only job
-			context.write(NullWritable.get(), logObject);
 		}
-
 	}
 	
 	public String getVisitor (String[] logline) {

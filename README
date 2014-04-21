@@ -12,17 +12,32 @@ The output is a tab-delimited file in HDFS containing the following:
  - Referer (URL)
  - User agent
     
- The code assumes the following configuration in the httpd.conf configuration file. Fields are separated by the tab character.  
+The code assumes the following configuration in the httpd.conf configuration file. Fields are separated by the tab character.  
  	LogFormat "%{visitorcookiename}C\t%{Set-Cookie}o\t%h\t%l\t%u\t%t\t%r\t%>s\t%b\t%{Referer}i\t%{User-Agent}i\t" combined
    
- Example input line:
- 75.72.48.19.1395498184485044 - 75.72.48.19 - - [20/Mar/2014:08:22:01 -0400] "GET /index.php HTTP/1.1" 200 1822 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36"
+Example input line:
+ 12.34.56.78.1395498184485044 - 12.34.56.78 - - [20/Mar/2014:08:22:01 -0400] "GET /index.php HTTP/1.1" 200 1822 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36"
   
 This code was developed with the following configuration:
 Hadoop 2.2.0
 Java SE 1.7.0_51
 
-The following libraries are required to compile this application:
-hadoop-2.2.0/share/hadoop/mapreduce/hadoop-mapreduce-client-core-2.2.0.jar
-hadoop-2.2.0/share/hadoop/common/hadoop-common-2.2.0.jar
-hadoop-2.2.0/share/hadoop/common/lib/commons-cli-1.2.jar
+Instructions for compiling and executing the application (assumes basic knowledge of of Java and a working Hadoop environment installed in the directory specified by $HADOOP_HOME):
+
+1) Configure Eclipse to include the following libraries or ensure they are in the CLASSPATH if compiling from command line: 
+   $HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-client-core-2.2.0.jar
+   $HADOOP_HOME/share/hadoop/common/hadoop-common-2.2.0.jar
+   $HADOOP_HOME/share/hadoop/common/lib/commons-cli-1.2.jar
+   $HADOOP_HOME/share/hadoop/common/lib/log4j-1.2.17.jar
+2) Compile the source and create a jar file
+3) Create an input directory in Hadoop
+   hadoop fs -mkdir /input
+   hadoop fs -put <yourinputfile> /input
+4) Remove output directory if rerunning
+   hadoop fs -rm -r /output
+5) Run the application from the command line
+   hadoop jar <pathtoyourjarfile> com.optimetrum.share.WebLogDriver /input /output
+6) Check the output (job failed if no output)
+   hadoop fs -cat /output/part-m-00000 
+7) Check the job logs (syslog) for any error messages - the application will create a log4j entry and skip records that do not have the expected number of input fields
+
